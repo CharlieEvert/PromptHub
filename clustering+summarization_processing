@@ -1,0 +1,42 @@
+import pandas as pd
+import openai
+
+openai.api_key = <INSERT>
+
+df = pd.read_csv('/Users/cevert/Desktop/ai_projects/recursive_sum_clustering/Womens Clothing E-Commerce Reviews.csv')
+embedding_engine = 'text-embedding-ada-002'
+
+# Create a new column 'Combined' that contains the column titles and their content  
+df = df.filter(regex='^(?!Unnamed.*)') 
+df['Recommended IND'] = df['Recommended IND'].apply(lambda x: 'yes' if x == 1 else 'no')
+df['Combined'] = df.apply(lambda row: ', '.join([f'{col}: {row[col]}' for col in df.columns]), axis=1)  
+
+embedded_data = []
+for index, row in df.iterrows():
+    
+    text = row.Combined
+    review_id = row['Clothing ID']
+    
+    embedding = openai.Embedding.create(
+        input = text,
+        model = embedding_engine
+    )['data'][0]['embedding']
+    
+    values = {'Clothing ID' : review_id,
+              'Text' : text,
+              'Age' : row['Age'],
+              'Title' : row['Title'], 
+              'Review Text' : row['Review Text'],
+              'Rating' : row['Rating'],
+              'Recommended IND' : row['Recommended IND'],
+              'Positive Feedback Count' : row['Positive Feedback Count'],
+              'Division Name' : row['Division Name'],
+              'Department Name' : row['Department Name'],
+              'Class Name' : row['Class Name'],
+              'Embedding' : embedding}
+    
+    embedded_data.append(values)
+    
+final_df = pd.DataFrame(embedded_data)
+
+final_df.to_csv('review_embeddings.csv')
